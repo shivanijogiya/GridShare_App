@@ -1,4 +1,4 @@
-# GridShare - P2P Peer-to-Peer Energy Trading Platform
+# GridShare - P2P (Peer-to-Peer) Energy Trading Platform
 
 A comprehensive blockchain-inspired platform for decentralized energy trading, enabling buildings with solar panels to sell excess energy directly to neighboring buildings.
 

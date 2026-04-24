@@ -27,7 +27,7 @@ A comprehensive blockchain-inspired platform for decentralized energy trading, e
   - 🔵 Blue: EV Charging Stations
 - Real-time smart meter simulation
 - Add new energy nodes
-- View node details and statistics
+- View node details and statistics.
 
 ### Energy Trading
 - Browse available energy from surplus nodes

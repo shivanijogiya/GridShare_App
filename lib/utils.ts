@@ -1,6 +1,8 @@
 export const calculateDynamicPrice = (basePrice: number, demand: number, supply: number): number => {
+  if (supply <= 0) return basePrice;
   const demandSupplyRatio = demand / supply;
-  return basePrice * demandSupplyRatio;
+  const clampedRatio = Math.max(0.5, Math.min(demandSupplyRatio, 3.0));
+  return basePrice * clampedRatio;
 };
 
 export const calculateCarbonSaved = (energyKWh: number): number => {

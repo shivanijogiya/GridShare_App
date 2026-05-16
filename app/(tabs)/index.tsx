@@ -232,11 +232,13 @@ const styles = StyleSheet.create({
   },
   balanceRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 20,
     gap: 16,
   },
   balanceItem: {
     flex: 1,
+    minWidth: 120,
   },
   balanceItemLabel: {
     fontSize: 12,
@@ -260,10 +262,12 @@ const styles = StyleSheet.create({
   },
   energyGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   energyCard: {
     flex: 1,
+    minWidth: 100,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -307,6 +311,7 @@ const styles = StyleSheet.create({
   },
   carbonHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 16,
   },
@@ -325,11 +330,13 @@ const styles = StyleSheet.create({
   },
   carbonDetails: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 20,
     gap: 16,
   },
   carbonDetail: {
     flex: 1,
+    minWidth: 120,
     padding: 12,
     backgroundColor: '#0f172a',
     borderRadius: 12,
@@ -371,9 +378,11 @@ const styles = StyleSheet.create({
   },
   nodeHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
   },
   nodeName: {
     fontSize: 16,
@@ -402,10 +411,12 @@ const styles = StyleSheet.create({
   },
   nodeStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   nodeStat: {
     flex: 1,
+    minWidth: 80,
   },
   nodeStatLabel: {
     fontSize: 11,
@@ -434,5 +445,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
     marginTop: 4,
+  },
+  // Touch-friendly button styles
+  touchButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  touchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  responsiveContainer: {
+    maxWidth: 768,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

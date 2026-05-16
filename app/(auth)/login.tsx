@@ -96,9 +96,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#64748b',
+    textAlign: 'center',  
   },
   form: {
     gap: 16,
+    width: '100%',        
+    maxWidth: 400,        
+    alignSelf: 'center', 
   },
   input: {
     backgroundColor: '#1e293b',
@@ -108,6 +112,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     borderWidth: 1,
     borderColor: '#334155',
+   
+    minHeight: 52,
   },
   button: {
     backgroundColor: '#10b981',
@@ -115,6 +121,8 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+   
+    minHeight: 52,
   },
   buttonText: {
     color: '#fff',
@@ -124,6 +132,8 @@ const styles = StyleSheet.create({
   linkButton: {
     padding: 16,
     alignItems: 'center',
+   
+    minHeight: 48,
   },
   linkText: {
     color: '#10b981',

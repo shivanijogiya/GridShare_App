@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const { signIn } = useAuth();
 
   const validateEmail = (email: string): boolean => {
@@ -15,29 +18,47 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMessage('Please fill in all fields');
       return;
     }
 
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setErrorMessage('Password must be at least 6 characters');
       return;
     }
-    Alert.alert('Success', 'Validation passed');
-      return;
+    setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
 
     if (error) {
-      Alert.alert('Login Failed', error.message);
+      setErrorMessage(error.message);
     } else {
       router.replace('/(tabs)');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    if (!email || !validateEmail(email)) {
+      setErrorMessage('Please enter a valid email address to reset password');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setLoading(false);
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setSuccessMessage('Password reset link sent to your email!');
     }
   };
 
@@ -49,6 +70,9 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.form}>
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -78,6 +102,14 @@ export default function LoginScreen() {
           ) : (
             <Text style={styles.buttonText}>Sign In</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.forgotPasswordButton}
+          onPress={handleForgotPassword}
+          disabled={loading}
+        >
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -152,6 +184,36 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: '#10b981',
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+    textAlign: 'center',
+    backgroundColor: '#7f1d1d30',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ef444450',
+    marginBottom: 8,
+  },
+  successText: {
+    color: '#10b981',
+    fontSize: 14,
+    textAlign: 'center',
+    backgroundColor: '#10b98130',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#10b98150',
+    marginBottom: 8,
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  forgotPasswordText: {
+    color: '#94a3b8',
     fontSize: 14,
   },
 });

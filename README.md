@@ -4,7 +4,7 @@ A comprehensive blockchain-inspired platform for decentralized energy trading, e
 
 ## Features
 
-### Core Functionality
+### Core Functionality:
 - **User Authentication**: Secure email/password authentication with Supabase
 - **Energy Node Management**: Create and manage solar energy nodes with real-time monitoring
 - **Smart Meter Simulation**: Real-time energy generation and consumption tracking

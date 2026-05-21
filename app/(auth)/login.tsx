@@ -12,12 +12,13 @@ export default function LoginScreen() {
   const [successMessage, setSuccessMessage] = useState('');
   const { signIn } = useAuth();
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const validateEmailExpression = (email: string): boolean => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
   };
 
   const handleLogin = async () => {
+    if (loading) return;
     setErrorMessage('');
     setSuccessMessage('');
     if (!email || !password) {
@@ -25,14 +26,14 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!validateEmail(email)) {
-      setErrorMessage('Please enter a valid email address');
-      return;
+    if (!validateEmailExpression(email)) {
+        setErrorMessage('Please enter a valid email address');
+        return;
     }
 
     if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
-      return;
+        setErrorMessage('Password must be at least 6 characters');
+        return;
     }
     setLoading(true);
     const { error } = await signIn(email, password);
@@ -48,7 +49,7 @@ export default function LoginScreen() {
   const handleForgotPassword = async () => {
     setErrorMessage('');
     setSuccessMessage('');
-    if (!email || !validateEmail(email)) {
+    if (!email || !validateEmailExpression(email)) {
       setErrorMessage('Please enter a valid email address to reset password');
       return;
     }
@@ -98,7 +99,10 @@ export default function LoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.buttonText}>Logging in...</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Sign In</Text>
           )}
@@ -175,6 +179,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   linkButton: {
     padding: 16,

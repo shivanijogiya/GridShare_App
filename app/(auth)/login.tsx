@@ -15,9 +15,10 @@ export default function LoginScreen() {
   const validateEmailExpression = (email: string): boolean => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(email);
-    };
+  };
 
   const handleLogin = async () => {
+    if (loading) return;
     setErrorMessage('');
     setSuccessMessage('');
     if (!email || !password) {
@@ -98,7 +99,10 @@ export default function LoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.buttonText}>Logging in...</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Sign In</Text>
           )}
@@ -175,6 +179,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   linkButton: {
     padding: 16,

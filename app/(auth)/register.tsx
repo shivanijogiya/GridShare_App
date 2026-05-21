@@ -11,10 +11,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
-  const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+  const validateEmailExpression = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
 const handleRegister = async () => {
   if (!email || !password || !fullName) {
@@ -22,20 +22,21 @@ const handleRegister = async () => {
     return;
   }
 
-  if (!validateEmail(email)) {
-    Alert.alert('Error', 'Please enter a valid email address');
-    return;
-  }
+  if (!validateEmailExpression(email)) 
+    {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
 
   if (password.length < 6) {
-    Alert.alert('Error', 'Password must be at least 6 characters');
-    return;
-  }
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
 
   if (fullName.trim().length < 2) {
-    Alert.alert('Error', 'Please enter your full name');
-    return;
-  }
+      Alert.alert('Error', 'Please enter your full name');
+      return;
+    }
 
   setLoading(true);
     const { error } = await signUp(email, password, fullName, nodeType);

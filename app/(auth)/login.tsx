@@ -12,10 +12,10 @@ export default function LoginScreen() {
   const [successMessage, setSuccessMessage] = useState('');
   const { signIn } = useAuth();
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmailExpression = (email: string): boolean => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
 
   const handleLogin = async () => {
     setErrorMessage('');
@@ -25,14 +25,14 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!validateEmail(email)) {
-      setErrorMessage('Please enter a valid email address');
-      return;
+    if (!validateEmailExpression(email)) {
+        setErrorMessage('Please enter a valid email address');
+        return;
     }
 
     if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
-      return;
+        setErrorMessage('Password must be at least 6 characters');
+        return;
     }
     setLoading(true);
     const { error } = await signIn(email, password);
@@ -48,7 +48,7 @@ export default function LoginScreen() {
   const handleForgotPassword = async () => {
     setErrorMessage('');
     setSuccessMessage('');
-    if (!email || !validateEmail(email)) {
+    if (!email || !validateEmailExpression(email)) {
       setErrorMessage('Please enter a valid email address to reset password');
       return;
     }

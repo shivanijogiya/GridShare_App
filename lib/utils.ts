@@ -3,11 +3,12 @@ export const calculateDynamicPrice = (
   demand: number,
   supply: number
 ): number => {
-  if (supply <= 0 || !isFinite(basePrice) || !isFinite(demand) || !isFinite(supply)) {
+  if (!isFinite(basePrice) || !isFinite(demand) || !isFinite(supply) || supply <= 0) {
     return basePrice;
   }
 
-  return basePrice * (demand / supply);
+  const price = basePrice * (demand / supply);
+  return isFinite(price) ? price : basePrice;
 };
 export const calculateCarbonSaved = (energyKWh: number): number => {
   return energyKWh * 0.4;

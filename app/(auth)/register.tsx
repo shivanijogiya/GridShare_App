@@ -11,18 +11,35 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
-  const handleRegister = async () => {
-    if (!email || !password || !fullName) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const validateEmailExpression = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+const handleRegister = async () => {
+  if (loading) return;
+  if (!email || !password || !fullName) {
+    Alert.alert('Error', 'Please fill in all fields');
+    return;
+  }
+
+  if (!validateEmailExpression(email)) 
+    {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
-    if (password.length < 6) {
+  if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
-    setLoading(true);
+  if (fullName.trim().length < 2) {
+      Alert.alert('Error', 'Please enter your full name');
+      return;
+    }
+
+  setLoading(true);
     const { error } = await signUp(email, password, fullName, nodeType);
     setLoading(false);
 
@@ -103,7 +120,10 @@ export default function RegisterScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.buttonText}>Creating account...</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Create Account</Text>
           )}
@@ -206,6 +226,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   linkButton: {
     padding: 16,

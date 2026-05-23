@@ -1,10 +1,10 @@
-# GridShare - P2P (Peer-to-Peer) Energy Trading Platform (open source project for GSSoC'26)
+# GridShare - P2P (Peer-to-Peer) Energy Trading Platform (Open Source Project for GSSoC'26)
 
 A comprehensive blockchain-inspired platform for decentralized energy trading, enabling buildings with solar panels to sell excess energy directly to neighboring buildings.
 
 ## Features
 
-### Core Functionality
+### Core Functionality:
 - **User Authentication**: Secure email/password authentication with Supabase
 - **Energy Node Management**: Create and manage solar energy nodes with real-time monitoring
 - **Smart Meter Simulation**: Real-time energy generation and consumption tracking

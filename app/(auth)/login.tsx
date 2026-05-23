@@ -1,77 +1,121 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [cooldown, setCooldown] = useState(0);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+  // Cooldown timer
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [cooldown]);
+
+  // Forgot password handler
+  const handleForgotPassword = async () => {
+    // Prevent multiple requests
+    if (loading || cooldown > 0) return;
+
+    // Validate email
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email address.');
       return;
     }
 
-    setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
+    try {
+      setLoading(true);
 
-    if (error) {
-      Alert.alert('Login Failed', error.message);
-    } else {
-      router.replace('/(tabs)');
+      /**
+       * Replace this with actual API call if needed
+       * Example:
+       * await supabase.auth.resetPasswordForEmail(email);
+       */
+
+      await fakeResetPasswordApi();
+
+      Alert.alert(
+        'Success',
+        'Password reset email sent successfully.'
+      );
+
+      // Start cooldown
+      setCooldown(30);
+    } catch (error) {
+      console.error(error);
+
+      Alert.alert(
+        'Error',
+        'Failed to send password reset email.'
+      );
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Temporary mock API
+  const fakeResetPasswordApi = async () => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, 2000);
+    });
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>GridShare</Text>
-        <Text style={styles.subtitle}>Peer-to-Peer Energy Trading</Text>
-      </View>
+      <Text style={styles.title}>Login</Text>
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      <TextInput
+        placeholder="Enter email"
+        placeholderTextColor="#999"
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => router.push('/(auth)/register')}
-        >
-          <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          (loading || cooldown > 0) && styles.disabledButton,
+        ]}
+        disabled={loading || cooldown > 0}
+        onPress={handleForgotPassword}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>
+            {cooldown > 0
+              ? `Retry in ${cooldown}s`
+              : 'Forgot Password?'}
+          </Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -80,53 +124,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a1929',
-    padding: 20,
     justifyContent: 'center',
+    padding: 20,
   },
-  header: {
-    marginBottom: 48,
-    alignItems: 'center',
-  },
+
   title: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#10b981',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-  },
-  form: {
-    gap: 16,
-  },
-  input: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
     color: '#fff',
-    borderWidth: 1,
-    borderColor: '#334155',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 30,
+    textAlign: 'center',
   },
+
+  input: {
+    backgroundColor: '#132f4c',
+    color: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+
   button: {
     backgroundColor: '#10b981',
-    borderRadius: 12,
-    padding: 16,
+    padding: 15,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 8,
   },
+
+  disabledButton: {
+    opacity: 0.6,
+  },
+
   buttonText: {
     color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
-  },
-  linkButton: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  linkText: {
-    color: '#10b981',
-    fontSize: 14,
+    fontSize: 16,
   },
 });

@@ -222,3 +222,4 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 If these variables are missing, the application will show a setup error message instead of crashing.
+made with love- shivani

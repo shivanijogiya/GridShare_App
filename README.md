@@ -208,18 +208,4 @@ For support and questions, please visit our documentation or contact support.
 
 **GridShare** - Sustainable Energy for Everyone 🌱⚡
 
-## Environment Setup
-
-Before running the project, create a `.env` file in the project root.
-
-You can copy values from `.env.example`.
-
-Required variables:
-
-```env
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-If these variables are missing, the application will show a setup error message instead of crashing.
 made with love- shivani

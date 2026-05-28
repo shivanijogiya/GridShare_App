@@ -7,12 +7,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (
-    email: string,
-    password: string,
-    fullName: string,
-    nodeType: string
-  ) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, nodeType: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 };
 
@@ -24,118 +19,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-    };
-
-    initializeAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-
     const { error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
+      email,
       password,
     });
-
     return { error };
   };
 
   const signUp = async (email: string, password: string, fullName: string, nodeType: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const sanitizedFullName = fullName.trim();
-    const sanitizedNodeType = nodeType.trim();
-
-    if (!normalizedEmail || !password || !sanitizedFullName || !sanitizedNodeType) {
-      return {
-        error: {
-          message: 'All signup fields are required.',
-        },
-      };
-    }
-
     const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
+      email,
       password,
-      options: {
-        data: {
-          full_name: sanitizedFullName,
-          node_type: sanitizedNodeType,
-        },
-      },
     });
 
     if (error || !data.user) {
       return { error };
     }
 
-    const isEmailConfirmationFlow = !data.session;
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: data.user.id,
+        email,
+        full_name: fullName,
+        node_type: nodeType,
+      });
 
-    try {
-      const { error: profileError } = await supabase.from('profiles').upsert(
-        {
-          user_id: data.user.id,
-          email: normalizedEmail,
-          full_name: sanitizedFullName,
-          node_type: sanitizedNodeType,
-        },
-        {
-          onConflict: 'user_id',
-        }
-      );
-
-      if (profileError) {
-        if (!isEmailConfirmationFlow) {
-          await supabase.auth.signOut();
-        }
-
-        return {
-          error: {
-            ...profileError,
-            message:
-              'Signup succeeded but profile creation failed. The session was cleared to prevent an incomplete onboarding state. Please try again or contact support.',
-          },
-        };
-      }
-
-      return { error: null };
-    } catch (profileInsertFailure: any) {
-      if (!isEmailConfirmationFlow) {
-        await supabase.auth.signOut();
-      }
-
-      return {
-        error: {
-          message:
-            profileInsertFailure?.message ||
-            'Signup could not be completed because profile setup failed. The session was cleared to avoid a broken account state.',
-        },
-      };
-    }
+    return { error: profileError };
   };
 
   const signOut = async () => {
@@ -151,10 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-
   return context;
 }

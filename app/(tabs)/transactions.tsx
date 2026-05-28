@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import crypto from 'crypto-js';
@@ -34,6 +45,12 @@ type AvailableListing = {
   availableEnergy: number;
 };
 
+type ExecuteTradeResponse = {
+  success: boolean;
+  transaction_id?: string;
+  error_message?: string;
+};
+
 export default function TransactionsScreen() {
   const { user } = useAuth();
   const [myNodes, setMyNodes] = useState<EnergyNode[]>([]);
@@ -66,59 +83,91 @@ export default function TransactionsScreen() {
   };
 
   const fetchMyNodes = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('energy_nodes')
       .select('*')
       .eq('user_id', user?.id)
       .eq('is_active', true);
+
+    if (error) {
+      console.error('Failed to fetch buyer nodes:', error.message);
+      return;
+    }
+
     if (data) setMyNodes(data);
   };
 
   const fetchAvailableNodes = async () => {
-    const { data: nodesData } = await supabase
+    const { data: nodesData, error } = await supabase
       .from('energy_nodes')
       .select('*, profiles!inner(user_id, full_name)')
       .eq('is_active', true)
       .eq('node_status', 'surplus')
       .neq('user_id', user?.id);
 
+    if (error) {
+      console.error('Failed to fetch available nodes:', error.message);
+      return;
+    }
+
     if (nodesData) {
-      const listings: AvailableListing[] = nodesData.map((node: any) => ({
-        node,
-        userId: node.profiles.user_id,
-        userName: node.profiles.full_name,
-        availableEnergy: node.current_generation - node.current_consumption,
-      }));
+      const listings: AvailableListing[] = nodesData
+        .map((node: any) => ({
+          node,
+          userId: node.profiles.user_id,
+          userName: node.profiles.full_name,
+          availableEnergy: Math.max(0, node.current_generation - node.current_consumption),
+        }))
+        .filter((listing) => listing.availableEnergy > 0);
+
       setAvailableNodes(listings);
     }
   };
 
   const fetchTransactions = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('energy_transactions')
       .select('*')
       .or(`seller_id.eq.${user?.id},buyer_id.eq.${user?.id}`)
       .order('created_at', { ascending: false })
       .limit(20);
+
+    if (error) {
+      console.error('Failed to fetch transactions:', error.message);
+      return;
+    }
+
     if (data) setTransactions(data);
   };
 
   const fetchCurrentPrice = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('energy_prices')
       .select('calculated_price')
       .order('timestamp', { ascending: false })
       .limit(1)
       .single();
+
+    if (error) {
+      console.error('Failed to fetch current price:', error.message);
+      return;
+    }
+
     if (data) setCurrentPrice(data.calculated_price);
   };
 
   const fetchLeaderboard = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('full_name, total_carbon_saved')
       .order('total_carbon_saved', { ascending: false })
       .limit(10);
+
+    if (error) {
+      console.error('Failed to fetch leaderboard:', error.message);
+      return;
+    }
+
     if (data) setLeaderboard(data);
   };
 
@@ -128,6 +177,13 @@ export default function TransactionsScreen() {
     setRefreshing(false);
   };
 
+  const resetBuyState = () => {
+    setShowBuyModal(false);
+    setEnergyAmount('');
+    setSelectedListing(null);
+    setSelectedBuyerNode(null);
+  };
+
   const handleBuyEnergy = async () => {
     if (!energyAmount || !selectedListing || !selectedBuyerNode || !user) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -135,91 +191,66 @@ export default function TransactionsScreen() {
     }
 
     const amount = parseFloat(energyAmount);
-    if (amount <= 0 || amount > selectedListing.availableEnergy) {
-      Alert.alert('Error', 'Invalid energy amount');
+
+    if (Number.isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Please enter a valid energy amount');
+      return;
+    }
+
+    if (amount > selectedListing.availableEnergy) {
+      Alert.alert('Error', 'Requested energy exceeds available supply');
+      return;
+    }
+
+    if (selectedListing.userId === user.id) {
+      Alert.alert('Error', 'You cannot buy energy from yourself');
       return;
     }
 
     setLoading(true);
 
-    const totalPrice = amount * currentPrice;
-    const carbonSaved = amount * 0.4;
+    const totalPrice = Number((amount * currentPrice).toFixed(2));
+    const carbonSaved = Number((amount * 0.4).toFixed(4));
 
-    const transactionData = {
-      seller_id: selectedListing.userId,
-      buyer_id: user.id,
-      seller_node_id: selectedListing.node.id,
-      buyer_node_id: selectedBuyerNode.id,
-      energy_amount: amount,
-      price_per_kwh: currentPrice,
-      total_price: totalPrice,
-      carbon_saved: carbonSaved,
-      transaction_hash: crypto.SHA256(`${Date.now()}-${user.id}-${amount}`).toString(),
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-    };
+    const transactionHash = crypto
+      .SHA256(`${Date.now()}-${user.id}-${selectedListing.node.id}-${selectedBuyerNode.id}-${amount}`)
+      .toString();
 
-    const { error: txError } = await supabase
-      .from('energy_transactions')
-      .insert(transactionData);
-
-    if (!txError) {
-      await supabase
-        .from('profiles')
-        .update({
-          total_energy_bought: supabase.rpc('increment', { x: amount }),
-          total_carbon_saved: supabase.rpc('increment', { x: carbonSaved }),
-          wallet_balance: supabase.rpc('decrement', { x: totalPrice }),
-        })
-        .eq('user_id', user.id);
-
-      await supabase
-        .from('profiles')
-        .update({
-          total_energy_sold: supabase.rpc('increment', { x: amount }),
-          wallet_balance: supabase.rpc('increment', { x: totalPrice }),
-        })
-        .eq('user_id', selectedListing.userId);
-
-      const today = new Date().toISOString().split('T')[0];
-      const { data: existingCarbon } = await supabase
-        .from('carbon_savings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single();
-
-      if (existingCarbon) {
-        await supabase
-          .from('carbon_savings')
-          .update({
-            energy_from_solar: existingCarbon.energy_from_solar + amount,
-            co2_saved: existingCarbon.co2_saved + carbonSaved,
-            equivalent_trees: existingCarbon.equivalent_trees + (carbonSaved / 21),
-            equivalent_km_saved: existingCarbon.equivalent_km_saved + (carbonSaved * 5),
-          })
-          .eq('id', existingCarbon.id);
-      } else {
-        await supabase.from('carbon_savings').insert({
-          user_id: user.id,
-          date: today,
-          energy_from_solar: amount,
-          co2_saved: carbonSaved,
-          equivalent_trees: carbonSaved / 21,
-          equivalent_km_saved: carbonSaved * 5,
-        });
-      }
-
-      Alert.alert('Success', `Transaction completed! You saved ${carbonSaved.toFixed(2)} kg CO₂`);
-      setShowBuyModal(false);
-      setEnergyAmount('');
-      setSelectedListing(null);
-      fetchData();
-    } else {
-      Alert.alert('Error', txError.message);
-    }
+    const { data, error } = await supabase.rpc('execute_energy_trade', {
+      p_seller_id: selectedListing.userId,
+      p_buyer_id: user.id,
+      p_seller_node_id: selectedListing.node.id,
+      p_buyer_node_id: selectedBuyerNode.id,
+      p_energy_amount: amount,
+      p_price_per_kwh: currentPrice,
+      p_total_price: totalPrice,
+      p_carbon_saved: carbonSaved,
+      p_transaction_hash: transactionHash,
+    });
 
     setLoading(false);
+
+    if (error) {
+      Alert.alert(
+        'Transaction Failed',
+        error.message || 'Unable to complete the trade. No partial updates were committed.'
+      );
+      return;
+    }
+
+    const tradeResult = Array.isArray(data) ? data[0] : (data as ExecuteTradeResponse | null);
+
+    if (!tradeResult?.success) {
+      Alert.alert(
+        'Transaction Failed',
+        tradeResult?.error_message || 'Unable to complete the trade. No partial updates were committed.'
+      );
+      return;
+    }
+
+    Alert.alert('Success', `Transaction completed! You saved ${carbonSaved.toFixed(2)} kg CO₂`);
+    resetBuyState();
+    await fetchData();
   };
 
   return (
@@ -231,10 +262,7 @@ export default function TransactionsScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Energy Trading</Text>
-        <TouchableOpacity
-          style={styles.leaderboardButton}
-          onPress={() => setShowLeaderboard(true)}
-        >
+        <TouchableOpacity style={styles.leaderboardButton} onPress={() => setShowLeaderboard(true)}>
           <TrendingUp size={20} color="#10b981" />
           <Text style={styles.leaderboardButtonText}>Leaderboard</Text>
         </TouchableOpacity>
@@ -258,6 +286,8 @@ export default function TransactionsScreen() {
               style={styles.listingCard}
               onPress={() => {
                 setSelectedListing(listing);
+                setSelectedBuyerNode(null);
+                setEnergyAmount('');
                 setShowBuyModal(true);
               }}
             >
@@ -271,8 +301,8 @@ export default function TransactionsScreen() {
                   <Text style={styles.listingStatValue}>{listing.availableEnergy.toFixed(1)} kWh</Text>
                 </View>
                 <View style={styles.listingStat}>
-                  <Text style={styles.listingStatLabel}>Price</Text>
-                  <Text style={styles.listingStatValue}>${(listing.availableEnergy * currentPrice).toFixed(2)}</Text>
+                  <Text style={styles.listingStatLabel}>Price / kWh</Text>
+                  <Text style={styles.listingStatValue}>${currentPrice.toFixed(3)}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -296,12 +326,8 @@ export default function TransactionsScreen() {
                   <ArrowDownLeft size={24} color="#f59e0b" />
                 )}
                 <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionType}>
-                    {tx.seller_id === user?.id ? 'Sold' : 'Bought'}
-                  </Text>
-                  <Text style={styles.transactionDate}>
-                    {new Date(tx.created_at).toLocaleDateString()}
-                  </Text>
+                  <Text style={styles.transactionType}>{tx.seller_id === user?.id ? 'Sold' : 'Bought'}</Text>
+                  <Text style={styles.transactionDate}>{new Date(tx.created_at).toLocaleDateString()}</Text>
                 </View>
                 <View style={styles.transactionAmount}>
                   <Text style={styles.transactionEnergy}>{tx.energy_amount.toFixed(1)} kWh</Text>
@@ -321,13 +347,13 @@ export default function TransactionsScreen() {
         visible={showBuyModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowBuyModal(false)}
+        onRequestClose={resetBuyState}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Buy Energy</Text>
-              <TouchableOpacity onPress={() => setShowBuyModal(false)}>
+              <TouchableOpacity onPress={resetBuyState}>
                 <X size={24} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -335,7 +361,9 @@ export default function TransactionsScreen() {
             {selectedListing && (
               <View style={styles.modalInfo}>
                 <Text style={styles.modalLabel}>From: {selectedListing.userName}</Text>
-                <Text style={styles.modalValue}>Available: {selectedListing.availableEnergy.toFixed(1)} kWh</Text>
+                <Text style={styles.modalValue}>
+                  Available: {selectedListing.availableEnergy.toFixed(1)} kWh
+                </Text>
               </View>
             )}
 
@@ -351,10 +379,12 @@ export default function TransactionsScreen() {
                     ]}
                     onPress={() => setSelectedBuyerNode(node)}
                   >
-                    <Text style={[
-                      styles.nodePillText,
-                      selectedBuyerNode?.id === node.id && styles.nodePillTextSelected,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.nodePillText,
+                        selectedBuyerNode?.id === node.id && styles.nodePillTextSelected,
+                      ]}
+                    >
                       {node.name}
                     </Text>
                   </TouchableOpacity>
@@ -422,17 +452,17 @@ export default function TransactionsScreen() {
             </View>
 
             <ScrollView style={styles.leaderboardList}>
-              {leaderboard.map((user, index) => (
+              {leaderboard.map((leaderboardUser, index) => (
                 <View key={index} style={styles.leaderboardItem}>
                   <View style={styles.leaderboardRank}>
                     <Text style={styles.leaderboardRankText}>{index + 1}</Text>
                   </View>
                   <View style={styles.leaderboardInfo}>
-                    <Text style={styles.leaderboardName}>{user.full_name}</Text>
+                    <Text style={styles.leaderboardName}>{leaderboardUser.full_name}</Text>
                     <View style={styles.leaderboardCarbon}>
                       <Leaf size={14} color="#10b981" />
                       <Text style={styles.leaderboardCarbonText}>
-                        {user.total_carbon_saved.toFixed(1)} kg CO₂
+                        {leaderboardUser.total_carbon_saved.toFixed(1)} kg CO₂
                       </Text>
                     </View>
                   </View>

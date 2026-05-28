@@ -25,31 +25,15 @@ export default function RegisterScreen() {
 
   const { signUp } = useAuth();
 
-  const handleRegister = async () => {
-    // Trim whitespace from inputs
-    const trimmedEmail = email.trim();
-    const trimmedFullName = fullName.trim();
 
-    // Validation
-    if (!trimmedEmail || !password || !trimmedFullName) {
-      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    if (password.length < 6) {
+  if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
-    setLoading(true);
-
-    // Use trimmed values for signup
-    const { error } = await signUp(
-      trimmedEmail,
-      password,
-      trimmedFullName,
-      nodeType
-    );
 
     setLoading(false);
 
@@ -149,7 +133,10 @@ export default function RegisterScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.buttonText}>Creating account...</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>
               Create Account

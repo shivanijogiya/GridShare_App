@@ -105,13 +105,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   platformList: {
-    gap: 8,
     marginTop: 8,
   },
   platformItem: {
     fontSize: 14,
     color: '#fff',
     paddingVertical: 4,
+    marginBottom: 8,
   },
   featuresCard: {
     margin: 20,
@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     marginBottom: 12,
     flexWrap: 'wrap',
   },
@@ -139,6 +138,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#fff',
+    marginLeft: 12,
   },
   legendCard: {
     margin: 20,
@@ -159,7 +159,6 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     marginBottom: 12,
   },
   legendDot: {
@@ -171,5 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#fff',
+    marginLeft: 12,
   },
 });
